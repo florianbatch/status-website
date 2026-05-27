@@ -1,0 +1,23 @@
+{
+  "name": "status-website",
+  "version": "1.0.0",
+  "description": "Ein Projekt zur Überwachung und Anzeige des Status von Diensten.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/florianbatch/status-website.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/florianbatch/status-website/issues"
+  },
+  "homepage": "https://github.com/florianbatch/status-website#readme",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

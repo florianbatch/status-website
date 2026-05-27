@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini CLI Status</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .card { @apply bg-white p-6 rounded-xl shadow-md border border-gray-100; }
+        .label { @apply text-sm font-medium text-gray-500 uppercase tracking-wider; }
+        .value { @apply text-3xl font-bold text-gray-800 mt-1; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-10 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">Gemini CLI Dashboard</h1>
+                <p class="text-gray-500">Live-Metriken deiner API-Nutzung</p>
+            </div>
+            <div id="status-indicator" class="flex items-center space-x-2">
+                <span class="relative flex h-3 w-3">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </span>
+                <span class="text-sm font-medium text-green-600">Verbunden</span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            <div class="card">
+                <p class="label">Total Tokens (7 Tage)</p>
+                <p id="total-tokens-7d" class="value">0</p>
+            </div>
+            <div class="card">
+                <p class="label">Token Output (24h)</p>
+                <p id="tokens-output-24h" class="value">0</p>
+            </div>
+            <div class="card">
+                <p class="label">RPM (Letzte Min)</p>
+                <p id="rpm" class="value">0</p>
+            </div>
+            <div class="card">
+                <p class="label">TPM (Letzte Min)</p>
+                <p id="tpm" class="value">0</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Token Input Verlauf (Letzte 24h)</h2>
+            <div class="h-80">
+                <canvas id="tokenChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chart;
+        
+        function initChart() {
+            const ctx = document.getElementById('tokenChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Input Tokens',
+                        data: [],
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        async function updateMetrics() {
+            try {
+                const response = await fetch('/api/metrics');
+                const data = await response.json();
+
+                document.getElementById('total-tokens-7d').textContent = data.totalTokens7d.toLocaleString();
+                document.getElementById('tokens-output-24h').textContent = data.tokensOutput24h.toLocaleString();
+                document.getElementById('rpm').textContent = data.rpm;
+                document.getElementById('tpm').textContent = data.tpm.toLocaleString();
+
+                chart.data.labels = data.labels;
+                chart.data.datasets[0].data = data.chartData;
+                chart.update('none'); // 'none' für flüssigere Updates ohne Animation
+                
+                document.getElementById('status-indicator').innerHTML = `
+                    <span class="relative flex h-3 w-3">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                    </span>
+                    <span class="text-sm font-medium text-green-600">Verbunden</span>
+                `;
+            } catch (error) {
+                console.error('Update fehlgeschlagen:', error);
+                document.getElementById('status-indicator').innerHTML = `
+                    <span class="flex h-3 w-3 rounded-full bg-red-500"></span>
+                    <span class="text-sm font-medium text-red-600">Verbindungsfehler</span>
+                `;
+            }
+        }
+
+        initChart();
+        updateMetrics();
+        setInterval(updateMetrics, 1000);
+    </script>
+</body>
+</html>
