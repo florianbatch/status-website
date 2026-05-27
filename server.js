@@ -50,7 +50,16 @@ app.get('/api/metrics', (req, res) => {
         let tpm = 0;
         let tokensOutput24h = 0;
         let totalTokens7d = 0;
-        let chartData = Array(24).fill(0); // Letzte 24h pro Stunde
+        
+        // Sekündliche Daten für die letzten 5 Minuten (300 Sekunden)
+        const secondsToTrack = 300;
+        let chartDataSeconds = Array(secondsToTrack).fill(0);
+        let labelsSeconds = [];
+
+        for (let i = secondsToTrack - 1; i >= 0; i--) {
+            const d = new Date(now - i * 1000);
+            labelsSeconds.push(d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Europe/Berlin' }));
+        }
 
         logs.forEach(entry => {
             if (entry.timestamp > oneMinuteAgo) {
@@ -59,14 +68,15 @@ app.get('/api/metrics', (req, res) => {
             }
             if (entry.timestamp > twentyFourHoursAgo) {
                 tokensOutput24h += entry.tokens.output;
-                
-                const hourDiff = Math.floor((now - entry.timestamp) / (1000 * 60 * 60));
-                if (hourDiff < 24) {
-                    chartData[23 - hourDiff] += entry.tokens.input;
-                }
             }
             if (entry.timestamp > sevenDaysAgo) {
                 totalTokens7d += entry.tokens.total;
+            }
+
+            // Sekündliche Aggregation für den Graphen
+            const secDiff = Math.floor((now - entry.timestamp) / 1000);
+            if (secDiff >= 0 && secDiff < secondsToTrack) {
+                chartDataSeconds[secondsToTrack - 1 - secDiff] += entry.tokens.input;
             }
         });
 
@@ -75,11 +85,8 @@ app.get('/api/metrics', (req, res) => {
             tpm,
             tokensOutput24h,
             totalTokens7d,
-            chartData,
-            labels: Array.from({length: 24}, (_, i) => {
-                const date = new Date(now - (23 - i) * 60 * 60 * 1000);
-                return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
-            })
+            chartData: chartDataSeconds,
+            labels: labelsSeconds
         });
     } catch (error) {
         res.status(500).json({ error: error.message });

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini CLI Status - DARK</title>
+    <title>Gemini CLI Status - LIVE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -42,7 +42,7 @@
         <header class="mb-10 flex justify-between items-center border-b border-slate-800 pb-6">
             <div>
                 <h1 class="text-3xl font-bold">Gemini CLI Dashboard</h1>
-                <p>Live-Metriken deiner API-Nutzung (Force Dark)</p>
+                <p>Live-Metriken deiner API-Nutzung (Echtzeit)</p>
             </div>
             <div id="status-indicator" class="flex items-center space-x-2 bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700">
                 <span class="relative flex h-2 w-2">
@@ -73,7 +73,7 @@
         </div>
 
         <div class="card">
-            <h2 class="text-lg font-semibold text-white mb-6">Token Input Verlauf (24h)</h2>
+            <h2 class="text-lg font-semibold text-white mb-6 text-center">Live Token Traffic (Sekündlich)</h2>
             <div class="h-80">
                 <canvas id="tokenChart"></canvas>
             </div>
@@ -82,6 +82,7 @@
 
     <script>
         let chart;
+        let isFirstLoad = true;
         
         function initChart() {
             const ctx = document.getElementById('tokenChart').getContext('2d');
@@ -95,10 +96,10 @@
                         borderColor: 'rgb(96, 165, 250)',
                         backgroundColor: 'rgba(96, 165, 250, 0.05)',
                         fill: true,
-                        tension: 0.5, // Noch glatter
-                        borderWidth: 4, // Dickere Linie
+                        tension: 0.6, 
+                        borderWidth: 4,
                         pointRadius: 0,
-                        pointHitRadius: 20,
+                        pointHitRadius: 10,
                         pointHoverRadius: 6,
                         pointBackgroundColor: 'rgb(96, 165, 250)'
                     }]
@@ -106,24 +107,33 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: {
+                        duration: 800,
+                        easing: 'linear'
+                    },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
                             enabled: true,
                             intersect: false,
-                            mode: 'index'
+                            mode: 'index',
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${context.parsed.y} Tokens`;
+                                }
+                            }
                         }
                     },
                     scales: {
                         y: { 
                             beginAtZero: true,
                             grid: { display: false },
-                            border: { display: false }, // Achsenlinie Y-Achse weg
+                            border: { display: false },
                             ticks: { color: 'rgb(148, 163, 184)' }
                         },
                         x: { 
                             grid: { display: false },
-                            border: { display: false }, // Achsenlinie X-Achse weg
+                            border: { display: false },
                             ticks: { display: false }
                         }
                     }
@@ -141,9 +151,20 @@
                 document.getElementById('rpm').textContent = data.rpm;
                 document.getElementById('tpm').textContent = data.tpm.toLocaleString();
 
-                chart.data.labels = data.labels;
-                chart.data.datasets[0].data = data.chartData;
-                chart.update('none');
+                // Finde den ersten Index mit Daten > 0, um leere Anfänge auszublenden
+                let firstDataIndex = data.chartData.findIndex(v => v > 0);
+                
+                // Wenn gar keine Daten da sind, zeige nur den letzten Punkt
+                if (firstDataIndex === -1) {
+                    chart.data.labels = [data.labels[data.labels.length - 1]];
+                    chart.data.datasets[0].data = [0];
+                } else {
+                    chart.data.labels = data.labels.slice(firstDataIndex);
+                    chart.data.datasets[0].data = data.chartData.slice(firstDataIndex);
+                }
+                
+                chart.update(isFirstLoad ? 'none' : 'default');
+                isFirstLoad = false;
             } catch (error) {
                 console.error('Update failed:', error);
             }
