@@ -76,7 +76,10 @@ app.get('/api/metrics', (req, res) => {
             tokensOutput24h,
             totalTokens7d,
             chartData,
-            labels: Array.from({length: 24}, (_, i) => `${(now.getHours() - (23 - i) + 24) % 24}:00`)
+            labels: Array.from({length: 24}, (_, i) => {
+                const date = new Date(now - (23 - i) * 60 * 60 * 1000);
+                return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' });
+            })
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
