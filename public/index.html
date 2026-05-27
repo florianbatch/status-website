@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini CLI Status - 24H</title>
+    <title>Gemini CLI Status - LIVE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Erzwungene Dark-Mode Styles via CSS (höhere Priorität als Tailwind Klassen) */
         html, body {
             background-color: #0f172a !important;
             color: #e2e8f0 !important;
@@ -44,25 +43,20 @@
                 <h1 class="text-3xl font-bold">Gemini CLI Dashboard</h1>
                 <p>Metriken der letzten 24 Stunden</p>
             </div>
-            <div id="status-indicator" class="flex items-center space-x-2 bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700">
-                <span class="relative flex h-2 w-2">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                </span>
-                <span class="text-xs font-medium text-green-400 uppercase tracking-tight">Verbunden</span>
+            <div class="flex items-center space-x-6">
+                <div class="flex items-center space-x-2 bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700">
+                    <div id="status-dot" class="h-2 w-2 rounded-full bg-slate-500"></div>
+                    <span id="agent-status" class="text-xs font-medium text-slate-300 uppercase tracking-tight">IDLE</span>
+                </div>
+                <div class="flex items-center space-x-2 bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    <span class="text-xs font-medium text-green-400 uppercase tracking-tight">Verbunden</span>
+                </div>
             </div>
         </header>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-            <div class="card md:col-span-2">
-                <p class="label">Agent Status</p>
-                <div class="flex items-center space-x-3 mt-2">
-                    <div id="status-dot" class="h-3 w-3 rounded-full"></div>
-                    <p id="agent-status" class="text-xl font-bold text-white"></p>
-                </div>
-                <p id="agent-task" class="text-sm text-slate-400 mt-2 italic"></p>
-            </div>
-        </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <div class="card">
@@ -121,7 +115,7 @@
                         borderColor: 'rgb(96, 165, 250)',
                         backgroundColor: 'rgba(96, 165, 250, 0.05)',
                         fill: true,
-                        tension: 0.8, // Wieder auf maximale Glätte
+                        tension: 0.8,
                         cubicInterpolationMode: 'monotone',
                         borderWidth: 5,
                         borderCapStyle: 'round',
@@ -135,7 +129,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    animation: false, // Deaktiviert das Hüpfen bei Updates
+                    animation: false,
                     plugins: {
                         legend: { display: false },
                         tooltip: {
@@ -171,9 +165,7 @@
                 const response = await fetch('/api/metrics?t=' + Date.now());
                 const data = await response.json();
 
-                // Explizites Runden und deutsches Format (Punkt für Tausender, kein Komma)
                 const format = (val) => Math.round(val).toLocaleString('de-DE');
-
                 document.getElementById('total-tokens-7d').textContent = format(data.totalTokens7d);
                 document.getElementById('tokens-output-24h').textContent = format(data.tokensOutput24h);
                 document.getElementById('rpm').textContent = data.rpm;
@@ -185,16 +177,13 @@
                 // Agent Status
                 const agent = data.agent;
                 document.getElementById('agent-status').textContent = agent.status.toUpperCase();
-                document.getElementById('agent-task').textContent = agent.task;
                 const dot = document.getElementById('status-dot');
-                dot.className = 'h-3 w-3 rounded-full ' + (agent.status === 'idle' ? 'bg-slate-500' : agent.status === 'thinking' ? 'bg-yellow-500 animate-pulse' : 'bg-blue-500 animate-pulse');
+                dot.className = 'h-2 w-2 rounded-full ' + (agent.status === 'idle' ? 'bg-slate-500' : agent.status === 'thinking' ? 'bg-yellow-500 animate-pulse' : 'bg-blue-500 animate-pulse');
 
-                // Glättungs-Funktion (Moving Average) für perfekt runde Bögen
                 function smooth(values, windowSize) {
                     let result = [];
                     for (let i = 0; i < values.length; i++) {
-                        let sum = 0;
-                        let count = 0;
+                        let sum = 0, count = 0;
                         for (let j = Math.max(0, i - windowSize); j <= i; j++) {
                             sum += values[j];
                             count++;
@@ -204,10 +193,7 @@
                     return result;
                 }
 
-                // Glätte die 1.440 Minuten-Punkte extrem stark (1 Stunde Fenster)
                 const smoothedData = smooth(data.chartData, 60); 
-
-                // Finde den ersten Index mit echtem Daten-Inhalt
                 let firstDataIndex = data.chartData.findIndex(v => v > 0);
                 
                 if (firstDataIndex === -1) {
@@ -217,7 +203,6 @@
                     chart.data.labels = data.labels.slice(firstDataIndex);
                     chart.data.datasets[0].data = smoothedData.slice(firstDataIndex);
                 }
-                
                 chart.update('none');
             } catch (error) {
                 console.error('Update failed:', error);
@@ -226,7 +211,7 @@
 
         initChart();
         updateMetrics();
-        setInterval(updateMetrics, 5000); // Alle 5 Sekunden reicht für 24h Übersicht
+        setInterval(updateMetrics, 5000);
     </script>
 </body>
 </html>
