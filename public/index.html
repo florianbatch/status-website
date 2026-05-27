@@ -180,13 +180,29 @@
                 document.getElementById('rpm').textContent = data.rpm;
                 document.getElementById('tpm').textContent = format(data.tpm);
                 
-                document.getElementById('cpu').textContent = data.system.cpu + '%';
-                document.getElementById('ram').textContent = data.system.ram + '%';
-                document.getElementById('disk').textContent = data.system.disk + '%';
-                
-                document.getElementById('cpu-bar').style.width = data.system.cpu + '%';
-                document.getElementById('ram-bar').style.width = data.system.ram + '%';
-                document.getElementById('disk-bar').style.width = data.system.disk + '%';
+                // Hilfsfunktion für Balken-Farbe
+                const getBarColor = (p) => p < 70 ? 'bg-green-500' : (p < 90 ? 'bg-yellow-500' : 'bg-red-500');
+
+                // CPU
+                const cpuEl = document.getElementById('cpu');
+                const cpuBar = document.getElementById('cpu-bar');
+                cpuEl.textContent = data.system.cpu + '%';
+                cpuBar.style.width = data.system.cpu + '%';
+                cpuBar.className = `h-2 rounded-full transition-all duration-500 ${getBarColor(data.system.cpu)}`;
+
+                // RAM
+                const ramEl = document.getElementById('ram');
+                const ramBar = document.getElementById('ram-bar');
+                ramEl.textContent = data.system.ram + '%';
+                ramBar.style.width = data.system.ram + '%';
+                ramBar.className = `h-2 rounded-full transition-all duration-500 ${getBarColor(data.system.ram)}`;
+
+                // Disk
+                const diskEl = document.getElementById('disk');
+                const diskBar = document.getElementById('disk-bar');
+                diskEl.textContent = data.system.disk + '%';
+                diskBar.style.width = data.system.disk + '%';
+                diskBar.className = `h-2 rounded-full transition-all duration-500 ${getBarColor(data.system.disk)}`;
                 
                 // Agent Status
                 const agent = data.agent;
