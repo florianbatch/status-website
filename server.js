@@ -16,8 +16,7 @@ function getAgentStatus() {
         
         const latestFile = files.sort((a, b) => fs.statSync(path.join(LOG_DIR, b)).mtime - fs.statSync(path.join(LOG_DIR, a)).mtime)[0];
         const content = fs.readFileSync(path.join(LOG_DIR, latestFile), 'utf8');
-        const lines = content.trim().split('
-');
+        const lines = content.trim().split('\n');
         const entry = JSON.parse(lines[lines.length - 1]);
 
         if (entry.toolCalls && entry.toolCalls.length > 0) {
@@ -38,8 +37,7 @@ function getTimeline() {
         if (files.length === 0) return [];
         
         const latestFile = files.sort((a, b) => fs.statSync(path.join(LOG_DIR, b)).mtime - fs.statSync(path.join(LOG_DIR, a)).mtime)[0];
-        const lines = fs.readFileSync(path.join(LOG_DIR, latestFile), 'utf8').split('
-');
+        const lines = fs.readFileSync(path.join(LOG_DIR, latestFile), 'utf8').split('\n');
         
         let timeline = [];
         for (let i = lines.length - 1; i >= Math.max(0, lines.length - 15); i--) {
