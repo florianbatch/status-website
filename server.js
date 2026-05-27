@@ -7,6 +7,9 @@ const port = 3000;
 
 const LOG_DIR = '/root/.gemini/tmp/root/chats';
 
+// CPU-Daten für Differenzberechnung
+let prevCpuTimes = { idle: 0, total: 0 };
+
 function parseLogs() {
     const files = fs.readdirSync(LOG_DIR).filter(f => f.endsWith('.jsonl'));
     let allEntries = [];
@@ -41,14 +44,22 @@ function getSystemMetrics() {
     const used = total - available;
     const ramPercent = ((used / total) * 100).toFixed(1);
 
-    // Disk: Nutze df für korrekte LXC-Ansicht
+    // Disk: df
     const diskInfo = require('child_process').execSync('df -h /').toString().split('\n')[1].split(/\s+/)[4];
     const diskPercent = diskInfo.replace('%', '');
 
-    // CPU: LXC Load Average (oft Host-weit) -> Alternative: Cgroup
-    const load = os.loadavg()[0];
-    const cpus = os.cpus().length;
-    const cpuPercent = Math.min(100, ((load / cpus) * 100)).toFixed(1);
+    // CPU: /proc/stat
+    const stat = fs.readFileSync('/proc/stat', 'utf8').split('\n')[0].split(/\s+/).slice(1);
+    const idle = parseInt(stat[3]);
+    const totalCpu = stat.reduce((acc, val) => acc + parseInt(val), 0);
+    
+    let cpuPercent = 0;
+    if (prevCpuTimes.total > 0) {
+        const diffIdle = idle - prevCpuTimes.idle;
+        const diffTotal = totalCpu - prevCpuTimes.total;
+        cpuPercent = ((1 - (diffIdle / diffTotal)) * 100).toFixed(1);
+    }
+    prevCpuTimes = { idle, total: totalCpu };
 
     return { ram: ramPercent, cpu: cpuPercent, disk: diskPercent };
 }
