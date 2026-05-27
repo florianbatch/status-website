@@ -97,7 +97,9 @@
                         fill: true,
                         tension: 0.4,
                         borderWidth: 2,
-                        pointRadius: 3,
+                        pointRadius: 0, // Keine sichtbaren Punkte
+                        pointHitRadius: 20, // Großer Bereich für Tooltips beim Hovern
+                        pointHoverRadius: 5, // Punkt erscheint nur beim Hovern
                         pointBackgroundColor: 'rgb(96, 165, 250)'
                     }]
                 },
@@ -105,7 +107,12 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: false }
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            intersect: false, // Tooltip erscheint, sobald man auf der X-Achse in der Nähe ist
+                            mode: 'index'
+                        }
                     },
                     scales: {
                         y: { 
