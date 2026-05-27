@@ -154,16 +154,32 @@
                 document.getElementById('rpm').textContent = data.rpm;
                 document.getElementById('tpm').textContent = data.tpm.toLocaleString();
 
-                // Finde den ersten Index mit Daten > 0, um leere Anfänge auszublenden
-                let firstDataIndex = data.chartData.findIndex(v => v > 0);
+                // Glättungs-Funktion (Moving Average), um "Kanten" abzurunden
+                function smooth(values, windowSize) {
+                    let result = [];
+                    for (let i = 0; i < values.length; i++) {
+                        let sum = 0;
+                        let count = 0;
+                        for (let j = Math.max(0, i - windowSize); j <= i; j++) {
+                            sum += values[j];
+                            count++;
+                        }
+                        result.push(sum / count);
+                    }
+                    return result;
+                }
+
+                const smoothedData = smooth(data.chartData, 5); // Fenster von 5 Sekunden zum Glätten
+
+                // Finde den ersten Index mit Daten > 0
+                let firstDataIndex = smoothedData.findIndex(v => v > 0);
                 
-                // Wenn gar keine Daten da sind, zeige nur den letzten Punkt
                 if (firstDataIndex === -1) {
                     chart.data.labels = [data.labels[data.labels.length - 1]];
                     chart.data.datasets[0].data = [0];
                 } else {
                     chart.data.labels = data.labels.slice(firstDataIndex);
-                    chart.data.datasets[0].data = data.chartData.slice(firstDataIndex);
+                    chart.data.datasets[0].data = smoothedData.slice(firstDataIndex);
                 }
                 
                 chart.update(isFirstLoad ? 'none' : 'default');
