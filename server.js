@@ -40,7 +40,6 @@ function getAgentStatus() {
         return { status: 'idle', task: 'Bereit' };
     }
 }
-}
 
 function getSystemMetrics() {
     const memInfo = fs.readFileSync('/proc/meminfo', 'utf8');
