@@ -93,13 +93,13 @@
                         label: 'Input Tokens',
                         data: [],
                         borderColor: 'rgb(96, 165, 250)',
-                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        backgroundColor: 'rgba(96, 165, 250, 0.05)',
                         fill: true,
-                        tension: 0.4,
-                        borderWidth: 2,
-                        pointRadius: 0, // Keine sichtbaren Punkte
-                        pointHitRadius: 20, // Großer Bereich für Tooltips beim Hovern
-                        pointHoverRadius: 5, // Punkt erscheint nur beim Hovern
+                        tension: 0.5, // Noch glatter
+                        borderWidth: 4, // Dickere Linie
+                        pointRadius: 0,
+                        pointHitRadius: 20,
+                        pointHoverRadius: 6,
                         pointBackgroundColor: 'rgb(96, 165, 250)'
                     }]
                 },
@@ -110,18 +110,20 @@
                         legend: { display: false },
                         tooltip: {
                             enabled: true,
-                            intersect: false, // Tooltip erscheint, sobald man auf der X-Achse in der Nähe ist
+                            intersect: false,
                             mode: 'index'
                         }
                     },
                     scales: {
                         y: { 
                             beginAtZero: true,
-                            grid: { display: false }, // Gitterlinien Y-Achse weg
+                            grid: { display: false },
+                            border: { display: false }, // Achsenlinie Y-Achse weg
                             ticks: { color: 'rgb(148, 163, 184)' }
                         },
                         x: { 
-                            grid: { display: false }, // Gitterlinien X-Achse weg
+                            grid: { display: false },
+                            border: { display: false }, // Achsenlinie X-Achse weg
                             ticks: { display: false }
                         }
                     }
