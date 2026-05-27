@@ -16,10 +16,10 @@ function getAgentStatus() {
         
         const latestFile = files.sort((a, b) => fs.statSync(path.join(LOG_DIR, b)).mtime - fs.statSync(path.join(LOG_DIR, a)).mtime)[0];
         const content = fs.readFileSync(path.join(LOG_DIR, latestFile), 'utf8');
-        const lines = content.trim().split('\n');
+        const lines = content.trim().split('
+');
         const entry = JSON.parse(lines[lines.length - 1]);
 
-        // Echtzeit-Status: Direkt basierend auf dem letzten Eintrag
         if (entry.toolCalls && entry.toolCalls.length > 0) {
             return { status: 'working', task: entry.toolCalls[0].name || 'Führe Tool aus...' };
         }
@@ -32,6 +32,34 @@ function getAgentStatus() {
     }
 }
 
+function getTimeline() {
+    try {
+        const files = fs.readdirSync(LOG_DIR).filter(f => f.endsWith('.jsonl'));
+        if (files.length === 0) return [];
+        
+        const latestFile = files.sort((a, b) => fs.statSync(path.join(LOG_DIR, b)).mtime - fs.statSync(path.join(LOG_DIR, a)).mtime)[0];
+        const lines = fs.readFileSync(path.join(LOG_DIR, latestFile), 'utf8').split('
+');
+        
+        let timeline = [];
+        for (let i = lines.length - 1; i >= Math.max(0, lines.length - 15); i--) {
+            if (!lines[i].trim()) continue;
+            try {
+                const entry = JSON.parse(lines[i]);
+                if (entry.toolCalls && entry.toolCalls.length > 0) {
+                    const tool = entry.toolCalls[0];
+                    timeline.push({ 
+                        time: new Date(entry.timestamp).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }),
+                        action: tool.name || 'Aktion',
+                        desc: tool.description || 'Tool ausgeführt'
+                    });
+                }
+            } catch (e) {}
+        }
+        return timeline;
+    } catch (e) { return []; }
+}
+
 function getSystemMetrics() {
     const memInfo = fs.readFileSync('/proc/meminfo', 'utf8');
     const total = parseInt(memInfo.match(/MemTotal:\s+(\d+)/)[1]);
@@ -39,10 +67,12 @@ function getSystemMetrics() {
     const used = total - available;
     const ramPercent = ((used / total) * 100).toFixed(1);
 
-    const diskInfo = require('child_process').execSync('df -h /').toString().split('\n')[1].split(/\s+/)[4];
+    const diskInfo = require('child_process').execSync('df -h /').toString().split('
+')[1].split(/\s+/)[4];
     const diskPercent = diskInfo.replace('%', '');
 
-    const stat = fs.readFileSync('/proc/stat', 'utf8').split('\n')[0].split(/\s+/).slice(1);
+    const stat = fs.readFileSync('/proc/stat', 'utf8').split('
+')[0].split(/\s+/).slice(1);
     const idle = parseInt(stat[3]);
     const totalCpu = stat.reduce((acc, val) => acc + parseInt(val), 0);
     
@@ -66,7 +96,8 @@ app.get('/api/metrics', (req, res) => {
 
         files.forEach(file => {
             const content = fs.readFileSync(path.join(LOG_DIR, file), 'utf8');
-            content.split('\n').forEach(line => {
+            content.split('
+').forEach(line => {
                 if (line.trim()) {
                     try {
                         const entry = JSON.parse(line);
@@ -117,7 +148,8 @@ app.get('/api/metrics', (req, res) => {
             chartData: cumulativeData,
             labels: labelsPeriods,
             system: getSystemMetrics(),
-            agent: getAgentStatus()
+            agent: getAgentStatus(),
+            timeline: getTimeline()
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
