@@ -92,8 +92,7 @@ app.get('/api/metrics', (req, res) => {
 
         files.forEach(file => {
             const content = fs.readFileSync(path.join(LOG_DIR, file), 'utf8');
-            content.split('
-').forEach(line => {
+            content.split('\n').forEach(line => {
                 if (line.trim()) {
                     try {
                         const entry = JSON.parse(line);
