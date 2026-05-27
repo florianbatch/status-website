@@ -34,20 +34,23 @@ function parseLogs() {
 }
 
 function getSystemMetrics() {
-    const totalMem = os.totalmem();
-    const freeMem = os.freemem();
-    const usedMem = totalMem - freeMem;
-    const ramPercent = ((usedMem / totalMem) * 100).toFixed(1);
+    // RAM: MemTotal - MemAvailable
+    const memInfo = fs.readFileSync('/proc/meminfo', 'utf8');
+    const total = parseInt(memInfo.match(/MemTotal:\s+(\d+)/)[1]);
+    const available = parseInt(memInfo.match(/MemAvailable:\s+(\d+)/)[1]);
+    const used = total - available;
+    const ramPercent = ((used / total) * 100).toFixed(1);
 
+    // Disk: Nutze df für korrekte LXC-Ansicht
+    const diskInfo = require('child_process').execSync('df -h /').toString().split('\n')[1].split(/\s+/)[4];
+    const diskPercent = diskInfo.replace('%', '');
+
+    // CPU: LXC Load Average (oft Host-weit) -> Alternative: Cgroup
     const load = os.loadavg()[0];
     const cpus = os.cpus().length;
-    const cpuPercent = ((load / cpus) * 100).toFixed(1);
+    const cpuPercent = Math.min(100, ((load / cpus) * 100)).toFixed(1);
 
-    // Disk-Check (vereinfacht für /)
-    const stats = fs.statfsSync('/');
-    const diskUsed = ((stats.blocks - stats.bfree) / stats.blocks) * 100;
-
-    return { ram: ramPercent, cpu: cpuPercent, disk: diskUsed.toFixed(1) };
+    return { ram: ramPercent, cpu: cpuPercent, disk: diskPercent };
 }
 
 app.use(express.static('public'));
