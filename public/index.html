@@ -168,8 +168,8 @@
                     return result;
                 }
 
-                // Glätte die 1.440 Minuten-Punkte extrem stark
-                const smoothedData = smooth(data.chartData, 40); 
+                // Glätte die 1.440 Minuten-Punkte extrem stark (1 Stunde Fenster)
+                const smoothedData = smooth(data.chartData, 60); 
 
                 // Finde den ersten Index mit echtem Daten-Inhalt
                 let firstDataIndex = data.chartData.findIndex(v => v > 0);
