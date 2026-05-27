@@ -7,48 +7,45 @@ const port = 3000;
 
 const LOG_DIR = '/root/.gemini/tmp/root/chats';
 
-// CPU-Daten für Differenzberechnung
 let prevCpuTimes = { idle: 0, total: 0 };
 
-function parseLogs() {
-    const files = fs.readdirSync(LOG_DIR).filter(f => f.endsWith('.jsonl'));
-    let allEntries = [];
+function getAgentStatus() {
+    try {
+        // Suche die neueste Chat-Datei
+        const files = fs.readdirSync(LOG_DIR).filter(f => f.endsWith('.jsonl'));
+        if (files.length === 0) return { status: 'idle', task: 'Keine Aktivität' };
+        
+        const latestFile = files.sort((a, b) => fs.statSync(path.join(LOG_DIR, b)).mtime - fs.statSync(path.join(LOG_DIR, a)).mtime)[0];
+        const lines = fs.readFileSync(path.join(LOG_DIR, latestFile), 'utf8').split('\n');
+        const lastEntry = JSON.parse(lines.filter(l => l.trim()).slice(-1)[0]);
 
-    files.forEach(file => {
-        const content = fs.readFileSync(path.join(LOG_DIR, file), 'utf8');
-        const lines = content.split('\n');
-        lines.forEach(line => {
-            if (line.trim()) {
-                try {
-                    const entry = JSON.parse(line);
-                    if (entry.tokens && entry.timestamp) {
-                        allEntries.push({
-                            timestamp: new Date(entry.timestamp),
-                            tokens: entry.tokens
-                        });
-                    }
-                } catch (e) {}
+        if (lastEntry.type === 'gemini') {
+            if (lastEntry.thoughts && lastEntry.thoughts.length > 0) {
+                const thought = lastEntry.thoughts.slice(-1)[0];
+                return { status: 'thinking', task: thought.description || 'Analysiere...' };
             }
-        });
-    });
-
-    allEntries.sort((a, b) => a.timestamp - b.timestamp);
-    return allEntries;
+            if (lastEntry.toolCalls && lastEntry.toolCalls.length > 0) {
+                const tool = lastEntry.toolCalls.slice(-1)[0];
+                return { status: 'working', task: tool.description || tool.name };
+            }
+            return { status: 'idle', task: 'Bereit' };
+        }
+        return { status: 'idle', task: 'Bereit' };
+    } catch (e) {
+        return { status: 'idle', task: 'Bereit' };
+    }
 }
 
 function getSystemMetrics() {
-    // RAM: MemTotal - MemAvailable
     const memInfo = fs.readFileSync('/proc/meminfo', 'utf8');
     const total = parseInt(memInfo.match(/MemTotal:\s+(\d+)/)[1]);
     const available = parseInt(memInfo.match(/MemAvailable:\s+(\d+)/)[1]);
     const used = total - available;
     const ramPercent = ((used / total) * 100).toFixed(1);
 
-    // Disk: df
     const diskInfo = require('child_process').execSync('df -h /').toString().split('\n')[1].split(/\s+/)[4];
     const diskPercent = diskInfo.replace('%', '');
 
-    // CPU: /proc/stat
     const stat = fs.readFileSync('/proc/stat', 'utf8').split('\n')[0].split(/\s+/).slice(1);
     const idle = parseInt(stat[3]);
     const totalCpu = stat.reduce((acc, val) => acc + parseInt(val), 0);
@@ -68,17 +65,31 @@ app.use(express.static('public'));
 
 app.get('/api/metrics', (req, res) => {
     try {
-        const logs = parseLogs();
+        const files = fs.readdirSync(LOG_DIR).filter(f => f.endsWith('.jsonl'));
+        let allEntries = [];
+
+        files.forEach(file => {
+            const content = fs.readFileSync(path.join(LOG_DIR, file), 'utf8');
+            content.split('\n').forEach(line => {
+                if (line.trim()) {
+                    try {
+                        const entry = JSON.parse(line);
+                        if (entry.tokens && entry.timestamp) {
+                            allEntries.push({ timestamp: new Date(entry.timestamp), tokens: entry.tokens });
+                        }
+                    } catch (e) {}
+                }
+            });
+        });
+
+        allEntries.sort((a, b) => a.timestamp - b.timestamp);
+        
         const now = new Date();
         const oneMinuteAgo = new Date(now - 60 * 1000);
         const twentyFourHoursAgo = new Date(now - 24 * 60 * 60 * 1000);
         const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
-        let rpm = 0;
-        let tpm = 0;
-        let tokensOutput24h = 0;
-        let totalTokens7d = 0;
-        
+        let rpm = 0, tpm = 0, tokensOutput24h = 0, totalTokens7d = 0;
         const periods = 1440; 
         let chartDataPeriods = Array(periods).fill(0);
         let labelsPeriods = [];
@@ -88,43 +99,29 @@ app.get('/api/metrics', (req, res) => {
             labelsPeriods.push(d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' }));
         }
 
-        logs.forEach(entry => {
-            if (entry.timestamp > oneMinuteAgo) {
-                rpm++;
-                tpm += entry.tokens.total;
-            }
+        allEntries.forEach(entry => {
+            if (entry.timestamp > oneMinuteAgo) { rpm++; tpm += entry.tokens.total; }
             if (entry.timestamp > twentyFourHoursAgo) {
                 tokensOutput24h += entry.tokens.output;
                 const minDiff = Math.floor((now - entry.timestamp) / (1000 * 60));
-                if (minDiff >= 0 && minDiff < periods) {
-                    chartDataPeriods[periods - 1 - minDiff] += entry.tokens.input;
-                }
+                if (minDiff >= 0 && minDiff < periods) chartDataPeriods[periods - 1 - minDiff] += entry.tokens.input;
             }
-            if (entry.timestamp > sevenDaysAgo) {
-                totalTokens7d += entry.tokens.total;
-            }
+            if (entry.timestamp > sevenDaysAgo) totalTokens7d += entry.tokens.total;
         });
 
         let runningTotal = 0;
-        const cumulativeData = chartDataPeriods.map(val => {
-            runningTotal += val;
-            return runningTotal;
-        });
+        const cumulativeData = chartDataPeriods.map(val => { runningTotal += val; return runningTotal; });
 
         res.json({
-            rpm,
-            tpm,
-            tokensOutput24h,
-            totalTokens7d,
+            rpm, tpm, tokensOutput24h, totalTokens7d,
             chartData: cumulativeData,
             labels: labelsPeriods,
-            system: getSystemMetrics()
+            system: getSystemMetrics(),
+            agent: getAgentStatus()
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-app.listen(port, '0.0.0.0', () => {
-    console.log(`Server läuft auf http://0.0.0.0:${port}`);
-});
+app.listen(port, '0.0.0.0', () => console.log(`Server running at http://0.0.0.0:${port}`));

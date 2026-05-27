@@ -53,6 +53,17 @@
             </div>
         </header>
 
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            <div class="card md:col-span-2">
+                <p class="label">Agent Status</p>
+                <div class="flex items-center space-x-3 mt-2">
+                    <div id="status-dot" class="h-3 w-3 rounded-full"></div>
+                    <p id="agent-status" class="text-xl font-bold text-white"></p>
+                </div>
+                <p id="agent-task" class="text-sm text-slate-400 mt-2 italic"></p>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <div class="card">
                 <p class="label">Total Tokens (7d)</p>
@@ -170,6 +181,13 @@
                 document.getElementById('cpu').textContent = data.system.cpu + '%';
                 document.getElementById('ram').textContent = data.system.ram + '%';
                 document.getElementById('disk').textContent = data.system.disk + '%';
+                
+                // Agent Status
+                const agent = data.agent;
+                document.getElementById('agent-status').textContent = agent.status.toUpperCase();
+                document.getElementById('agent-task').textContent = agent.task;
+                const dot = document.getElementById('status-dot');
+                dot.className = 'h-3 w-3 rounded-full ' + (agent.status === 'idle' ? 'bg-slate-500' : agent.status === 'thinking' ? 'bg-yellow-500 animate-pulse' : 'bg-blue-500 animate-pulse');
 
                 // Glättungs-Funktion (Moving Average) für perfekt runde Bögen
                 function smooth(values, windowSize) {
