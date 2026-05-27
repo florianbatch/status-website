@@ -17,15 +17,15 @@ function getAgentStatus() {
         const latestFile = files.sort((a, b) => fs.statSync(path.join(LOG_DIR, b)).mtime - fs.statSync(path.join(LOG_DIR, a)).mtime)[0];
         const lines = fs.readFileSync(path.join(LOG_DIR, latestFile), 'utf8').split('\n');
         
-        // Suche vom Ende her
+        // Suche vom Ende der Logs nach oben
         for (let i = lines.length - 1; i >= Math.max(0, lines.length - 20); i--) {
             if (!lines[i].trim()) continue;
             try {
                 const entry = JSON.parse(lines[i]);
                 
-                // Wir betrachten nur Einträge der letzten 30 Sekunden als "aktiv"
+                // Status-Fenster von 5 Sekunden (da Abfrage sekündlich ist)
                 const timestamp = new Date(entry.timestamp);
-                if (Date.now() - timestamp.getTime() > 30000) continue;
+                if (Date.now() - timestamp.getTime() > 5000) return { status: 'idle', task: 'Bereit' };
 
                 if (entry.toolCalls && entry.toolCalls.length > 0) {
                     return { status: 'working', task: entry.toolCalls[0].name || 'Führe Tool aus...' };
