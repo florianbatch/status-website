@@ -11,24 +11,27 @@ let prevCpuTimes = { idle: 0, total: 0 };
 
 function getAgentStatus() {
     try {
-        // Suche die neueste Chat-Datei
         const files = fs.readdirSync(LOG_DIR).filter(f => f.endsWith('.jsonl'));
-        if (files.length === 0) return { status: 'idle', task: 'Keine Aktivität' };
+        if (files.length === 0) return { status: 'idle', task: 'Bereit' };
         
         const latestFile = files.sort((a, b) => fs.statSync(path.join(LOG_DIR, b)).mtime - fs.statSync(path.join(LOG_DIR, a)).mtime)[0];
-        const lines = fs.readFileSync(path.join(LOG_DIR, latestFile), 'utf8').split('\n');
-        const lastEntry = JSON.parse(lines.filter(l => l.trim()).slice(-1)[0]);
-
-        if (lastEntry.type === 'gemini') {
-            if (lastEntry.thoughts && lastEntry.thoughts.length > 0) {
-                const thought = lastEntry.thoughts.slice(-1)[0];
-                return { status: 'thinking', task: thought.description || 'Analysiere...' };
-            }
-            if (lastEntry.toolCalls && lastEntry.toolCalls.length > 0) {
-                const tool = lastEntry.toolCalls.slice(-1)[0];
-                return { status: 'working', task: tool.description || tool.name };
-            }
-            return { status: 'idle', task: 'Bereit' };
+        const content = fs.readFileSync(path.join(LOG_DIR, latestFile), 'utf8');
+        const lines = content.split('\n');
+        
+        // Durchsuche die letzten 50 Zeilen nach Status-Hinweisen
+        for (let i = lines.length - 1; i >= Math.max(0, lines.length - 50); i--) {
+            if (!lines[i].trim()) continue;
+            try {
+                const entry = JSON.parse(lines[i]);
+                if (entry.toolCalls && entry.toolCalls.length > 0) {
+                    const tool = entry.toolCalls[0];
+                    return { status: 'working', task: tool.description || tool.name };
+                }
+                if (entry.thoughts && entry.thoughts.length > 0) {
+                    const thought = entry.thoughts[0];
+                    return { status: 'thinking', task: thought.description || 'Analysiere...' };
+                }
+            } catch (e) {}
         }
         return { status: 'idle', task: 'Bereit' };
     } catch (e) {
@@ -90,7 +93,7 @@ app.get('/api/metrics', (req, res) => {
         const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
         let rpm = 0, tpm = 0, tokensOutput24h = 0, totalTokens7d = 0;
-        const processedIds = new Set(); // Um doppelte Einträge in Log-Dateien zu vermeiden
+        const processedIds = new Set();
         const periods = 1440; 
         let chartDataPeriods = Array(periods).fill(0);
         let labelsPeriods = [];
@@ -101,7 +104,6 @@ app.get('/api/metrics', (req, res) => {
         }
 
         allEntries.forEach(entry => {
-            // Nur eindeutige Einträge basierend auf der Nachricht oder ID verarbeiten
             if (processedIds.has(entry.timestamp.toISOString())) return;
             processedIds.add(entry.timestamp.toISOString());
 
