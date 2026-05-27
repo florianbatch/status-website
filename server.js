@@ -51,7 +51,7 @@ app.get('/api/metrics', (req, res) => {
         let tokensOutput24h = 0;
         let totalTokens7d = 0;
         
-        // Sekündliche Daten für die letzten 5 Minuten (300 Sekunden)
+        // Sekündliche Aggregation für den Graphen
         const secondsToTrack = 300;
         let chartDataSeconds = Array(secondsToTrack).fill(0);
         let labelsSeconds = [];
@@ -73,11 +73,17 @@ app.get('/api/metrics', (req, res) => {
                 totalTokens7d += entry.tokens.total;
             }
 
-            // Sekündliche Aggregation für den Graphen
             const secDiff = Math.floor((now - entry.timestamp) / 1000);
             if (secDiff >= 0 && secDiff < secondsToTrack) {
                 chartDataSeconds[secondsToTrack - 1 - secDiff] += entry.tokens.input;
             }
+        });
+
+        // Kumulativ machen (Aufsummieren von links nach rechts)
+        let runningTotal = 0;
+        const cumulativeData = chartDataSeconds.map(val => {
+            runningTotal += val;
+            return runningTotal;
         });
 
         res.json({
@@ -85,7 +91,7 @@ app.get('/api/metrics', (req, res) => {
             tpm,
             tokensOutput24h,
             totalTokens7d,
-            chartData: chartDataSeconds,
+            chartData: cumulativeData,
             labels: labelsSeconds
         });
     } catch (error) {
