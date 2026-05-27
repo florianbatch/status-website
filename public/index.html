@@ -3,100 +3,283 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gemini CLI Status</title>
+    <title>Gemini CLI Status - LIVE</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        html, body { background-color: #0f172a !important; color: #e2e8f0 !important; }
-        .card { background-color: #1e293b !important; border-color: #334155 !important; padding: 1.25rem; border-radius: 0.75rem; border-width: 1px; }
-        .label { color: #94a3b8 !important; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; }
-        .value { color: #ffffff !important; font-size: 1.5rem; font-weight: 700; margin-top: 0.25rem; }
+        html, body {
+            background-color: #0f172a !important;
+            color: #e2e8f0 !important;
+        }
+        .card {
+            background-color: #1e293b !important;
+            border-color: #334155 !important;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border-width: 1px;
+        }
+        .label {
+            color: #94a3b8 !important;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .value {
+            color: #ffffff !important;
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-top: 0.25rem;
+        }
+        h1 { color: #ffffff !important; }
+        p { color: #94a3b8 !important; }
     </style>
 </head>
-<body class="min-h-screen p-4 md:p-8">
-    <div class="max-w-7xl mx-auto">
-        <header class="mb-8 flex flex-col md:flex-row justify-between items-center border-b border-slate-800 pb-6 gap-4">
+<body class="min-h-screen p-8">
+    <div class="max-w-6xl mx-auto">
+        <header class="mb-10 flex justify-between items-center border-b border-slate-800 pb-6">
             <div>
-                <h1 class="text-2xl font-bold text-white">Gemini CLI Dashboard</h1>
+                <h1 class="text-3xl font-bold">Gemini CLI Dashboard</h1>
+                <p>Metriken der letzten 24 Stunden</p>
             </div>
-            <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-6">
+                <!-- Alert Icon -->
+                <div id="alert-indicator" class="hidden flex items-center space-x-2 bg-red-900/50 px-3 py-1 rounded-full border border-red-700 animate-pulse">
+                    <span class="text-xs font-bold text-red-100 uppercase tracking-tight">Kritisch!</span>
+                </div>
                 <div class="flex items-center space-x-2 bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700">
                     <div id="status-dot" class="h-2 w-2 rounded-full bg-slate-500"></div>
-                    <span id="agent-status" class="text-xs font-medium text-slate-300 uppercase">IDLE</span>
+                    <span id="agent-status" class="text-xs font-medium text-slate-300 uppercase tracking-tight">IDLE</span>
                 </div>
                 <div class="flex items-center space-x-2 bg-slate-800/50 px-3 py-1 rounded-full border border-slate-700">
                     <span class="relative flex h-2 w-2">
                         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                         <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                     </span>
-                    <span class="text-xs font-medium text-green-400 uppercase">Verbunden</span>
+                    <span class="text-xs font-medium text-green-400 uppercase tracking-tight">Verbunden</span>
                 </div>
             </div>
         </header>
 
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <div class="card"><p class="label">Total Tokens</p><p id="total-tokens-7d" class="value">0</p></div>
-            <div class="card"><p class="label">Output (24h)</p><p id="tokens-output-24h" class="value">0</p></div>
-            <div class="card"><p class="label">RPM</p><p id="rpm" class="value">0</p></div>
-            <div class="card"><p class="label">TPM</p><p id="tpm" class="value">0</p></div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div class="card"><p class="label">CPU</p><p id="cpu" class="value">0%</p><div class="w-full bg-slate-700 rounded-full h-1.5 mt-2"><div id="cpu-bar" class="bg-blue-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div></div></div>
-            <div class="card"><p class="label">RAM</p><p id="ram" class="value">0%</p><div class="w-full bg-slate-700 rounded-full h-1.5 mt-2"><div id="ram-bar" class="bg-blue-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div></div></div>
-            <div class="card"><p class="label">Disk</p><p id="disk" class="value">0%</p><div class="w-full bg-slate-700 rounded-full h-1.5 mt-2"><div id="disk-bar" class="bg-blue-500 h-1.5 rounded-full transition-all duration-500" style="width: 0%"></div></div></div>
-        </div>
-
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             <div class="card">
-                <h2 class="text-sm font-semibold text-white mb-4">Token Input Verlauf (24h)</h2>
-                <div class="h-64"><canvas id="tokenChart"></canvas></div>
+                <p class="label">Total Tokens (7d)</p>
+                <p id="total-tokens-7d" class="value">0</p>
             </div>
             <div class="card">
-                <h2 class="text-sm font-semibold text-white mb-4">Aktivitäts-Logbuch</h2>
-                <div id="timeline" class="space-y-3 max-h-64 overflow-y-auto pr-2 text-xs"></div>
+                <p class="label">Output (24h)</p>
+                <p id="tokens-output-24h" class="value">0</p>
+            </div>
+            <div class="card">
+                <p class="label">RPM</p>
+                <p id="rpm" class="value">0</p>
+            </div>
+            <div class="card">
+                <p class="label">TPM</p>
+                <p id="tpm" class="value">0</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+            <div class="card">
+                <p class="label">CPU Auslastung</p>
+                <p id="cpu" class="value">0%</p>
+                <div class="w-full bg-slate-700 rounded-full h-2 mt-2">
+                    <div id="cpu-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="card">
+                <p class="label">RAM Auslastung</p>
+                <p id="ram" class="value">0%</p>
+                <div class="w-full bg-slate-700 rounded-full h-2 mt-2">
+                    <div id="ram-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="card">
+                <p class="label">Disk Auslastung</p>
+                <p id="disk" class="value">0%</p>
+                <div class="w-full bg-slate-700 rounded-full h-2 mt-2">
+                    <div id="disk-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+            <div class="card">
+                <h2 class="text-lg font-semibold text-white mb-6 text-center">Token Input Verlauf (24 Stunden)</h2>
+                <div class="h-80">
+                    <canvas id="tokenChart"></canvas>
+                </div>
+            </div>
+            <div class="card">
+                <h2 class="text-lg font-semibold text-white mb-6 text-center">Aktivitäts-Logbuch</h2>
+                <div id="timeline" class="space-y-4 max-h-72 overflow-y-auto">
+                    <!-- Timeline wird hier dynamisch gefüllt -->
+                </div>
             </div>
         </div>
     </div>
+
     <script>
         let chart;
-        const ctx = document.getElementById('tokenChart').getContext('2d');
-        chart = new Chart(ctx, {
-            type: 'line',
-            data: { labels: [], datasets: [{ data: [], borderColor: 'rgb(96, 165, 250)', backgroundColor: 'rgba(96, 165, 250, 0.05)', fill: true, tension: 0.8, cubicInterpolationMode: 'monotone', borderWidth: 3, pointRadius: 0 }] },
-            options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false }, tooltip: { enabled: true, intersect: false, mode: 'index' } }, scales: { y: { beginAtZero: true, grid: { display: false }, border: { display: false }, ticks: { color: 'rgb(148, 163, 184)', font: { size: 10 } } }, x: { grid: { display: false }, border: { display: false }, ticks: { display: false } } } }
-        });
+        const history = { cpu: [], ram: [] };
+        
+        function initChart() {
+            const ctx = document.getElementById('tokenChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Input Tokens',
+                        data: [],
+                        borderColor: 'rgb(96, 165, 250)',
+                        backgroundColor: 'rgba(96, 165, 250, 0.05)',
+                        fill: true,
+                        tension: 0.8,
+                        cubicInterpolationMode: 'monotone',
+                        borderWidth: 5,
+                        borderCapStyle: 'round',
+                        borderJoinStyle: 'round',
+                        pointRadius: 0,
+                        pointHitRadius: 10,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: 'rgb(96, 165, 250)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            enabled: true,
+                            intersect: false,
+                            mode: 'index',
+                            callbacks: {
+                                label: function(context) {
+                                    return ` ${Math.round(context.parsed.y).toLocaleString()} Tokens`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { 
+                            beginAtZero: true,
+                            grid: { display: false },
+                            border: { display: false },
+                            ticks: { color: 'rgb(148, 163, 184)' }
+                        },
+                        x: { 
+                            grid: { display: false },
+                            border: { display: false },
+                            ticks: { display: false }
+                        }
+                    }
+                }
+            });
+        }
 
-        async function update() {
+        async function updateMetrics() {
             try {
-                const res = await fetch('/api/metrics?t=' + Date.now());
-                const data = await res.json();
+                const response = await fetch('/api/metrics?t=' + Date.now());
+                const data = await response.json();
+
                 const format = (val) => Math.round(val).toLocaleString('de-DE');
                 document.getElementById('total-tokens-7d').textContent = format(data.totalTokens7d);
                 document.getElementById('tokens-output-24h').textContent = format(data.tokensOutput24h);
                 document.getElementById('rpm').textContent = data.rpm;
                 document.getElementById('tpm').textContent = format(data.tpm);
-                document.getElementById('cpu').textContent = data.system.cpu + '%';
-                document.getElementById('ram').textContent = data.system.ram + '%';
-                document.getElementById('disk').textContent = data.system.disk + '%';
+                
+                // Alert Logik: Prüfe CPU und RAM über 10 Min (600 Sekunden)
+                history.cpu.push(parseFloat(data.system.cpu));
+                history.ram.push(parseFloat(data.system.ram));
+                if (history.cpu.length > 600) { history.cpu.shift(); history.ram.shift(); }
+
+                const isCritical = (arr) => arr.length >= 600 && arr.every(v => v > 90);
+                const alertEl = document.getElementById('alert-indicator');
+                if (isCritical(history.cpu) || isCritical(history.ram)) {
+                    alertEl.classList.remove('hidden');
+                } else {
+                    alertEl.classList.add('hidden');
+                }
+                
+                // Hilfsfunktion für Balken-Farbe
                 const getBarColor = (p) => p < 70 ? 'bg-green-500' : (p < 90 ? 'bg-yellow-500' : 'bg-red-500');
-                document.getElementById('cpu-bar').style.width = data.system.cpu + '%';
-                document.getElementById('cpu-bar').className = `h-1.5 rounded-full transition-all duration-500 ${getBarColor(data.system.cpu)}`;
-                document.getElementById('ram-bar').style.width = data.system.ram + '%';
-                document.getElementById('ram-bar').className = `h-1.5 rounded-full transition-all duration-500 ${getBarColor(data.system.ram)}`;
-                document.getElementById('disk-bar').style.width = data.system.disk + '%';
-                document.getElementById('disk-bar').className = `h-1.5 rounded-full transition-all duration-500 ${getBarColor(data.system.disk)}`;
+
+                // CPU
+                const cpuEl = document.getElementById('cpu');
+                const cpuBar = document.getElementById('cpu-bar');
+                cpuEl.textContent = data.system.cpu + '%';
+                cpuBar.style.width = data.system.cpu + '%';
+                cpuBar.className = `h-2 rounded-full transition-all duration-500 ${getBarColor(data.system.cpu)}`;
+
+                // RAM
+                const ramEl = document.getElementById('ram');
+                const ramBar = document.getElementById('ram-bar');
+                ramEl.textContent = data.system.ram + '%';
+                ramBar.style.width = data.system.ram + '%';
+                ramBar.className = `h-2 rounded-full transition-all duration-500 ${getBarColor(data.system.ram)}`;
+
+                // Disk
+                const diskEl = document.getElementById('disk');
+                const diskBar = document.getElementById('disk-bar');
+                diskEl.textContent = data.system.disk + '%';
+                diskBar.style.width = data.system.disk + '%';
+                diskBar.className = `h-2 rounded-full transition-all duration-500 ${getBarColor(data.system.disk)}`;
+                
+                // Agent Status
                 const agent = data.agent;
                 document.getElementById('agent-status').textContent = agent.status.toUpperCase();
-                document.getElementById('status-dot').className = 'h-2 w-2 rounded-full ' + (agent.status === 'idle' ? 'bg-slate-500' : agent.status === 'thinking' ? 'bg-yellow-500 animate-pulse' : 'bg-blue-500 animate-pulse');
-                document.getElementById('timeline').innerHTML = data.timeline.map(i => `<div class="flex gap-2"><span class="text-slate-500 font-mono">${i.time}</span><span class="text-white">${i.action}</span></div>`).join('');
+                const dot = document.getElementById('status-dot');
+                dot.className = 'h-2 w-2 rounded-full ' + (agent.status === 'idle' ? 'bg-slate-500' : agent.status === 'thinking' ? 'bg-yellow-500 animate-pulse' : 'bg-blue-500 animate-pulse');
+
+                // Timeline
+                const timeline = document.getElementById('timeline');
+                timeline.innerHTML = data.timeline.map(item => `
+                    <div class="flex items-start space-x-3 text-sm">
+                        <span class="text-slate-500 font-mono shrink-0">${item.time}</span>
+                        <div>
+                            <p class="text-white font-medium">${item.action}</p>
+                            <p class="text-slate-400 text-xs">${item.desc}</p>
+                        </div>
+                    </div>
+                `).join('');
+
+                function smooth(values, windowSize) {
+                    let result = [];
+                    for (let i = 0; i < values.length; i++) {
+                        let sum = 0, count = 0;
+                        for (let j = Math.max(0, i - windowSize); j <= i; j++) {
+                            sum += values[j];
+                            count++;
+                        }
+                        result.push(sum / count);
+                    }
+                    return result;
+                }
+
+                const smoothedData = smooth(data.chartData, 60); 
                 let firstDataIndex = data.chartData.findIndex(v => v > 0);
-                chart.data.labels = firstDataIndex === -1 ? [data.labels[data.labels.length-1]] : data.labels.slice(firstDataIndex);
-                chart.data.datasets[0].data = firstDataIndex === -1 ? [0] : data.chartData.slice(firstDataIndex);
+                
+                if (firstDataIndex === -1) {
+                    chart.data.labels = [data.labels[data.labels.length - 1]];
+                    chart.data.datasets[0].data = [0];
+                } else {
+                    chart.data.labels = data.labels.slice(firstDataIndex);
+                    chart.data.datasets[0].data = smoothedData.slice(firstDataIndex);
+                }
                 chart.update('none');
-            } catch (e) { console.error(e); }
+            } catch (error) {
+                console.error('Update failed:', error);
+            }
         }
-        update(); setInterval(update, 1000);
+
+        initChart();
+        updateMetrics();
+        setInterval(updateMetrics, 1000);
     </script>
 </body>
 </html>
