@@ -90,6 +90,7 @@ app.get('/api/metrics', (req, res) => {
         const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
         let rpm = 0, tpm = 0, tokensOutput24h = 0, totalTokens7d = 0;
+        const processedIds = new Set(); // Um doppelte Einträge in Log-Dateien zu vermeiden
         const periods = 1440; 
         let chartDataPeriods = Array(periods).fill(0);
         let labelsPeriods = [];
@@ -100,6 +101,10 @@ app.get('/api/metrics', (req, res) => {
         }
 
         allEntries.forEach(entry => {
+            // Nur eindeutige Einträge basierend auf der Nachricht oder ID verarbeiten
+            if (processedIds.has(entry.timestamp.toISOString())) return;
+            processedIds.add(entry.timestamp.toISOString());
+
             if (entry.timestamp > oneMinuteAgo) { rpm++; tpm += entry.tokens.total; }
             if (entry.timestamp > twentyFourHoursAgo) {
                 tokensOutput24h += entry.tokens.output;
