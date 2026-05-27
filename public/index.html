@@ -53,22 +53,34 @@
             </div>
         </header>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-6 mb-10">
             <div class="card">
-                <p class="label">Total Tokens (7 Tage)</p>
+                <p class="label">Total Tokens (7d)</p>
                 <p id="total-tokens-7d" class="value">0</p>
             </div>
             <div class="card">
-                <p class="label">Token Output (24h)</p>
+                <p class="label">Output (24h)</p>
                 <p id="tokens-output-24h" class="value">0</p>
             </div>
             <div class="card">
-                <p class="label">RPM (Minute)</p>
+                <p class="label">RPM</p>
                 <p id="rpm" class="value">0</p>
             </div>
             <div class="card">
-                <p class="label">TPM (Minute)</p>
+                <p class="label">TPM</p>
                 <p id="tpm" class="value">0</p>
+            </div>
+            <div class="card">
+                <p class="label">CPU</p>
+                <p id="cpu" class="value">0%</p>
+            </div>
+            <div class="card">
+                <p class="label">RAM</p>
+                <p id="ram" class="value">0%</p>
+            </div>
+            <div class="card">
+                <p class="label">Disk</p>
+                <p id="disk" class="value">0%</p>
             </div>
         </div>
 
@@ -152,6 +164,9 @@
                 document.getElementById('tokens-output-24h').textContent = format(data.tokensOutput24h);
                 document.getElementById('rpm').textContent = data.rpm;
                 document.getElementById('tpm').textContent = format(data.tpm);
+                document.getElementById('cpu').textContent = data.system.cpu + '%';
+                document.getElementById('ram').textContent = data.system.ram + '%';
+                document.getElementById('disk').textContent = data.system.disk + '%';
 
                 // Glättungs-Funktion (Moving Average) für perfekt runde Bögen
                 function smooth(values, windowSize) {

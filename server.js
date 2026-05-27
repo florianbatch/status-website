@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const app = express();
 const port = 3000;
 
@@ -23,16 +24,30 @@ function parseLogs() {
                             tokens: entry.tokens
                         });
                     }
-                } catch (e) {
-                    // Ignoriere unvollständige JSON-Zeilen
-                }
+                } catch (e) {}
             }
         });
     });
 
-    // Sortiere nach Zeit
     allEntries.sort((a, b) => a.timestamp - b.timestamp);
     return allEntries;
+}
+
+function getSystemMetrics() {
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+    const ramPercent = ((usedMem / totalMem) * 100).toFixed(1);
+
+    const load = os.loadavg()[0];
+    const cpus = os.cpus().length;
+    const cpuPercent = ((load / cpus) * 100).toFixed(1);
+
+    // Disk-Check (vereinfacht für /)
+    const stats = fs.statfsSync('/');
+    const diskUsed = ((stats.blocks - stats.bfree) / stats.blocks) * 100;
+
+    return { ram: ramPercent, cpu: cpuPercent, disk: diskUsed.toFixed(1) };
 }
 
 app.use(express.static('public'));
@@ -45,13 +60,11 @@ app.get('/api/metrics', (req, res) => {
         const twentyFourHoursAgo = new Date(now - 24 * 60 * 60 * 1000);
         const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
-        // Metriken berechnen
         let rpm = 0;
         let tpm = 0;
         let tokensOutput24h = 0;
         let totalTokens7d = 0;
         
-        // 24 Stunden Abdeckung in 1-Minute-Blöcken für maximale Auflösung (1440 Punkte)
         const periods = 1440; 
         let chartDataPeriods = Array(periods).fill(0);
         let labelsPeriods = [];
@@ -68,8 +81,6 @@ app.get('/api/metrics', (req, res) => {
             }
             if (entry.timestamp > twentyFourHoursAgo) {
                 tokensOutput24h += entry.tokens.output;
-                
-                // Zuordnung zur Minute
                 const minDiff = Math.floor((now - entry.timestamp) / (1000 * 60));
                 if (minDiff >= 0 && minDiff < periods) {
                     chartDataPeriods[periods - 1 - minDiff] += entry.tokens.input;
@@ -80,7 +91,6 @@ app.get('/api/metrics', (req, res) => {
             }
         });
 
-        // Kumulativ aufbauen
         let runningTotal = 0;
         const cumulativeData = chartDataPeriods.map(val => {
             runningTotal += val;
@@ -93,7 +103,8 @@ app.get('/api/metrics', (req, res) => {
             tokensOutput24h,
             totalTokens7d,
             chartData: cumulativeData,
-            labels: labelsPeriods
+            labels: labelsPeriods,
+            system: getSystemMetrics()
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
