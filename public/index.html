@@ -81,14 +81,23 @@
             <div class="card">
                 <p class="label">CPU Auslastung</p>
                 <p id="cpu" class="value">0%</p>
+                <div class="w-full bg-slate-700 rounded-full h-2 mt-2">
+                    <div id="cpu-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
             </div>
             <div class="card">
                 <p class="label">RAM Auslastung</p>
                 <p id="ram" class="value">0%</p>
+                <div class="w-full bg-slate-700 rounded-full h-2 mt-2">
+                    <div id="ram-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
             </div>
             <div class="card">
                 <p class="label">Disk Auslastung</p>
                 <p id="disk" class="value">0%</p>
+                <div class="w-full bg-slate-700 rounded-full h-2 mt-2">
+                    <div id="disk-bar" class="bg-blue-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
             </div>
         </div>
 
@@ -170,9 +179,14 @@
                 document.getElementById('tokens-output-24h').textContent = format(data.tokensOutput24h);
                 document.getElementById('rpm').textContent = data.rpm;
                 document.getElementById('tpm').textContent = format(data.tpm);
+                
                 document.getElementById('cpu').textContent = data.system.cpu + '%';
                 document.getElementById('ram').textContent = data.system.ram + '%';
                 document.getElementById('disk').textContent = data.system.disk + '%';
+                
+                document.getElementById('cpu-bar').style.width = data.system.cpu + '%';
+                document.getElementById('ram-bar').style.width = data.system.ram + '%';
+                document.getElementById('disk-bar').style.width = data.system.disk + '%';
                 
                 // Agent Status
                 const agent = data.agent;
