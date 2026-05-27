@@ -145,15 +145,18 @@
                 const response = await fetch('/api/metrics?t=' + Date.now());
                 const data = await response.json();
 
-                document.getElementById('total-tokens-7d').textContent = data.totalTokens7d.toLocaleString();
-                document.getElementById('tokens-output-24h').textContent = data.tokensOutput24h.toLocaleString();
+                // Explizites Runden und deutsches Format (Punkt für Tausender, kein Komma)
+                const format = (val) => Math.round(val).toLocaleString('de-DE');
+
+                document.getElementById('total-tokens-7d').textContent = format(data.totalTokens7d);
+                document.getElementById('tokens-output-24h').textContent = format(data.tokensOutput24h);
                 document.getElementById('rpm').textContent = data.rpm;
-                document.getElementById('tpm').textContent = data.tpm.toLocaleString();
+                document.getElementById('tpm').textContent = format(data.tpm);
 
                 chart.data.labels = data.labels;
                 chart.data.datasets[0].data = data.chartData;
                 
-                chart.update('none'); // Absolut statisches Update
+                chart.update('none');
             } catch (error) {
                 console.error('Update failed:', error);
             }
