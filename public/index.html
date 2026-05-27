@@ -96,8 +96,11 @@
                         borderColor: 'rgb(96, 165, 250)',
                         backgroundColor: 'rgba(96, 165, 250, 0.05)',
                         fill: true,
-                        tension: 0.6, 
-                        borderWidth: 4,
+                        tension: 0.8, // Sehr hohe Spannung für weiche Kurven
+                        cubicInterpolationMode: 'monotone', // Verhindert spitze Knicke
+                        borderWidth: 5,
+                        borderCapStyle: 'round',
+                        borderJoinStyle: 'round',
                         pointRadius: 0,
                         pointHitRadius: 10,
                         pointHoverRadius: 6,
