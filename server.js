@@ -51,13 +51,13 @@ app.get('/api/metrics', (req, res) => {
         let tokensOutput24h = 0;
         let totalTokens7d = 0;
         
-        // 24 Stunden Abdeckung in 5-Minuten-Blöcken für maximale Glätte (288 Punkte)
-        const periods = 288; 
+        // 24 Stunden Abdeckung in 1-Minute-Blöcken für maximale Auflösung (1440 Punkte)
+        const periods = 1440; 
         let chartDataPeriods = Array(periods).fill(0);
         let labelsPeriods = [];
 
         for (let i = periods - 1; i >= 0; i--) {
-            const d = new Date(now - i * 5 * 60 * 1000);
+            const d = new Date(now - i * 60 * 1000);
             labelsPeriods.push(d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' }));
         }
 
@@ -69,8 +69,8 @@ app.get('/api/metrics', (req, res) => {
             if (entry.timestamp > twentyFourHoursAgo) {
                 tokensOutput24h += entry.tokens.output;
                 
-                // Zuordnung zum 5-Minuten-Block
-                const minDiff = Math.floor((now - entry.timestamp) / (1000 * 60 * 5));
+                // Zuordnung zur Minute
+                const minDiff = Math.floor((now - entry.timestamp) / (1000 * 60));
                 if (minDiff >= 0 && minDiff < periods) {
                     chartDataPeriods[periods - 1 - minDiff] += entry.tokens.input;
                 }
