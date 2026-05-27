@@ -65,12 +65,10 @@ function getSystemMetrics() {
     const used = total - available;
     const ramPercent = ((used / total) * 100).toFixed(1);
 
-    const diskInfo = require('child_process').execSync('df -h /').toString().split('
-')[1].split(/\s+/)[4];
+    const diskInfo = require('child_process').execSync('df -h /').toString().split('\n')[1].split(/\s+/)[4];
     const diskPercent = diskInfo.replace('%', '');
 
-    const stat = fs.readFileSync('/proc/stat', 'utf8').split('
-')[0].split(/\s+/).slice(1);
+    const stat = fs.readFileSync('/proc/stat', 'utf8').split('\n')[0].split(/\s+/).slice(1);
     const idle = parseInt(stat[3]);
     const totalCpu = stat.reduce((acc, val) => acc + parseInt(val), 0);
     
