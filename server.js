@@ -51,14 +51,14 @@ app.get('/api/metrics', (req, res) => {
         let tokensOutput24h = 0;
         let totalTokens7d = 0;
         
-        // Sekündliche Aggregation für den Graphen
-        const secondsToTrack = 300;
-        let chartDataSeconds = Array(secondsToTrack).fill(0);
-        let labelsSeconds = [];
+        // 24 Stunden Abdeckung in 5-Minuten-Blöcken für maximale Glätte (288 Punkte)
+        const periods = 288; 
+        let chartDataPeriods = Array(periods).fill(0);
+        let labelsPeriods = [];
 
-        for (let i = secondsToTrack - 1; i >= 0; i--) {
-            const d = new Date(now - i * 1000);
-            labelsSeconds.push(d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Europe/Berlin' }));
+        for (let i = periods - 1; i >= 0; i--) {
+            const d = new Date(now - i * 5 * 60 * 1000);
+            labelsPeriods.push(d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' }));
         }
 
         logs.forEach(entry => {
@@ -68,20 +68,21 @@ app.get('/api/metrics', (req, res) => {
             }
             if (entry.timestamp > twentyFourHoursAgo) {
                 tokensOutput24h += entry.tokens.output;
+                
+                // Zuordnung zum 5-Minuten-Block
+                const minDiff = Math.floor((now - entry.timestamp) / (1000 * 60 * 5));
+                if (minDiff >= 0 && minDiff < periods) {
+                    chartDataPeriods[periods - 1 - minDiff] += entry.tokens.input;
+                }
             }
             if (entry.timestamp > sevenDaysAgo) {
                 totalTokens7d += entry.tokens.total;
             }
-
-            const secDiff = Math.floor((now - entry.timestamp) / 1000);
-            if (secDiff >= 0 && secDiff < secondsToTrack) {
-                chartDataSeconds[secondsToTrack - 1 - secDiff] += entry.tokens.input;
-            }
         });
 
-        // Kumulativ machen (Aufsummieren von links nach rechts)
+        // Kumulativ aufbauen
         let runningTotal = 0;
-        const cumulativeData = chartDataSeconds.map(val => {
+        const cumulativeData = chartDataPeriods.map(val => {
             runningTotal += val;
             return runningTotal;
         });
@@ -92,7 +93,7 @@ app.get('/api/metrics', (req, res) => {
             tokensOutput24h,
             totalTokens7d,
             chartData: cumulativeData,
-            labels: labelsSeconds
+            labels: labelsPeriods
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
