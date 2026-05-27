@@ -95,9 +95,9 @@
                         borderColor: 'rgb(96, 165, 250)',
                         backgroundColor: 'rgba(96, 165, 250, 0.05)',
                         fill: true,
-                        tension: 0.4, 
+                        tension: 0.8, // Wieder auf maximale Glätte
                         cubicInterpolationMode: 'monotone',
-                        borderWidth: 4,
+                        borderWidth: 5,
                         borderCapStyle: 'round',
                         borderJoinStyle: 'round',
                         pointRadius: 0,
@@ -153,8 +153,17 @@
                 document.getElementById('rpm').textContent = data.rpm;
                 document.getElementById('tpm').textContent = format(data.tpm);
 
-                chart.data.labels = data.labels;
-                chart.data.datasets[0].data = data.chartData;
+                // Finde den ersten Index mit echtem Daten-Inhalt (> 0)
+                let firstDataIndex = data.chartData.findIndex(v => v > 0);
+                
+                if (firstDataIndex === -1) {
+                    chart.data.labels = [data.labels[data.labels.length - 1]];
+                    chart.data.datasets[0].data = [0];
+                } else {
+                    // Blende den leeren Anfang aus
+                    chart.data.labels = data.labels.slice(firstDataIndex);
+                    chart.data.datasets[0].data = data.chartData.slice(firstDataIndex);
+                }
                 
                 chart.update('none');
             } catch (error) {
