@@ -13,23 +13,25 @@ function getAgentStatus() {
     try {
         const files = fs.readdirSync(LOG_DIR).filter(f => f.endsWith('.jsonl'));
         if (files.length === 0) return { status: 'idle', task: 'Bereit' };
-        
+
         const latestFile = files.sort((a, b) => fs.statSync(path.join(LOG_DIR, b)).mtime - fs.statSync(path.join(LOG_DIR, a)).mtime)[0];
-        const content = fs.readFileSync(path.join(LOG_DIR, latestFile), 'utf8');
-        const lines = content.split('\n');
-        
-        // Durchsuche die letzten 50 Zeilen nach Status-Hinweisen
-        for (let i = lines.length - 1; i >= Math.max(0, lines.length - 50); i--) {
+        const lines = fs.readFileSync(path.join(LOG_DIR, latestFile), 'utf8').split('\n');
+
+        // Suche nach dem letzten Status, der nicht nur ein reiner Token-Log ist
+        for (let i = lines.length - 1; i >= Math.max(0, lines.length - 20); i--) {
             if (!lines[i].trim()) continue;
             try {
                 const entry = JSON.parse(lines[i]);
+
+                // Priorisiere Tool-Calls (Arbeit)
                 if (entry.toolCalls && entry.toolCalls.length > 0) {
                     const tool = entry.toolCalls[0];
-                    return { status: 'working', task: tool.description || tool.name };
+                    return { status: 'working', task: tool.description || 'Führe Tool aus...' };
                 }
+                // Sekundär Thoughts (Denken)
                 if (entry.thoughts && entry.thoughts.length > 0) {
-                    const thought = entry.thoughts[0];
-                    return { status: 'thinking', task: thought.description || 'Analysiere...' };
+                    const thought = entry.thoughts[entry.thoughts.length - 1];
+                    return { status: 'thinking', task: thought.description || 'Überlege...' };
                 }
             } catch (e) {}
         }
@@ -37,6 +39,7 @@ function getAgentStatus() {
     } catch (e) {
         return { status: 'idle', task: 'Bereit' };
     }
+}
 }
 
 function getSystemMetrics() {
